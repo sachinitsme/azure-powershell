@@ -1,0 +1,51 @@
+<#
+ # .SYNOPSIS
+The script is designed to create Multiple Azure VM's and join them to the specified domain while creation.
+Using this script you can achieve:
+1.Create Multiple Azure VM's under the same Cloud Service
+2.Add additional Azure VM's under an already created Cloud Service
+
+Requirements:
+1.Azure Powershell Module installed in the machine.
+2.Your Subscription Name, you need to specify the subscription name while using the script.
+3.Pre-created Affinity Group, you need to specify the name while using the script.
+4.Pre-created Storage in Azure, you need to specify the storage name while using the script.
+5.Pre-created Virtual Network in Azure, you need to specify the name while using the script.
+6.Pre-created Subnet under Virtual Network in Azure, you need to specify the name while using the script.
+7.Domain Controller configured and added to above VNET to get the machine joined to the domain during creation.
+8.Azure Image Name using the command ( Get-AzureVMImage | where-object { $_.Label -like "<ImageLabel>*" })
+
+Points to remember while using script:
+The promt where it will ask for username and password, you need to define the name and password that you want the administrator to have for the newly created machines and not the Domain Admin credentials of your Domain.
+ 
+#>
+
+<#
+ # Enter the count of VM's that you want to create for the Parameter VMCOUNT
+#>
+
+
+$vmcount = 1
+
+$startnumber = 1
+$vmName = Read-Host "Enter VM Series Name" 
+$vmServiceName = Read-Host "Enter Service Name"
+$vmAffinityGroup = Read-Host "Enter already created affinity group name"
+$vNetName = Read-Host "Enter already created Vnet Name"
+$subnetName = Read-Host "Enter existing subnet name you want to use"
+$vmImage = "a699494373c04fc0bc8f2bb1389d6106__Win2K8R2SP1-Datacenter-201408.01-en.us-127GB.vhd"
+$vmAdmin = Get-Credential
+$vmAdminUser = $vmAdmin.Username
+$vmAdminPassword = $vmAdmin.GetNetworkCredential().Password
+$vmDomain = Read-Host "Enter Domain name"
+$vmDomainNetBIOS = Read-Host "Enter Domain NetBIOS name"
+
+for($i = $startnumber; $i -le $vmcount; $i++)
+{
+$vmn = $vmName + $i  
+$vm = New-AzureVMConfig –Name $vmn –ImageName $vmImage –InstanceSize Small | Add-AzureProvisioningConfig –WindowsDomain –AdminUserName $vmAdminUser –Password $vmAdminPassword –JoinDomain $vmDomain –Domain $vmDomainNetBIOS –DomainUserName $vmAdminUser –DomainPassword $vmAdminPassword | 
+Set-AzureSubnet –SubnetNames $subnetName
+$vm | New-AzureVM –ServiceName $vmServiceName –VnetName $vNetName -AffinityGroup $vmAffinityGroup
+}
+
+
